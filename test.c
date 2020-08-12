@@ -172,12 +172,44 @@ static void test_parse_cases()
 
 }
 
+void show_car_json(json_value* v) {
+    if (strcmp(v->obj->k, "car") == 0)
+    {
+        printf("Car:  {\n");
+        v = &(v->obj->v);
+        for (int i = 0; i < v->olen; i++) {
+            switch (v->obj[i].v.type) {
+                case F_STRING:
+                    printf("%s : %s ,\n", v->obj[i].k, v->obj[i].v.s);
+                    break;
+                case F_NUMBER:
+                    printf("%s : %f ,\n", v->obj[i].k, v->obj[i].v.num);
+                    break;
+                case F_NULL:
+                default:
+                    printf("error\n");
+            }
+        }
+    }
+}
+
 int main()
 {
+#if 0
     test_parse_cases();
 
     test_error_case(F_PARSE_OK, "{\"AAAA\":{\"XXX\":889}}");
+#endif
 
-    printf("%d/%d (%3.2f%%) PASSED \n", test_pass, test_count, test_pass * 100.0 / test_count);
+    char* json = "{\"car\" :    {\n  \"id\":\"2131234523523\", \"weight\": 289.89 , \"name\":\"fih\"  \n}\n}";
+    json_value v;
+    json_parse(&v, json);
+    printf("%d\n", strcmp(v.obj->k, "c22ar"));
+
+    show_car_json(&v);
+
+    //printf("%d/%d (%3.2f%%) PASSED \n", test_pass, test_count, test_pass * 100.0 / test_count);
     return main_ret;
 }
+
+

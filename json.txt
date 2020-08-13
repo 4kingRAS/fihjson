@@ -1,0 +1,11 @@
+{
+    "name":"tesla",
+    "info":{
+        "weight":   2222,
+        "price":"12223.33",
+        "owner":{
+            "com":"foxconn",
+            "name":"wwowowo"
+        }
+    }
+}

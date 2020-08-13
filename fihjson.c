@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
@@ -23,6 +24,8 @@ static void json_parse_whitespace(json_context* c);
 static int json_parse_literal(json_context* c, json_value* v, json_type expect);
 static int json_parse_number(json_context* c, json_value* v);
 static int json_parse_string(json_context* c, json_value* v);
+
+int json_stringify_value(json_context* c, const json_value* v);
 
 /*__________________DECLARATION_AND_MACRO___________________*/
 
@@ -415,18 +418,21 @@ size_t json_get_object_size(const json_value* v)
     assert(v != NULL && v->type == F_OBJECT);
     return v->olen;
 }
+
 const char* json_get_object_key(const json_value* v, size_t index)
 {
     assert(v != NULL && v->type == F_OBJECT);
     assert(index < v->olen && index >= 0);
     return v->obj[index].k;
 }
+
 size_t json_get_object_key_length(const json_value* v, size_t index)
 {
     assert(v != NULL && v->type == F_OBJECT);
     assert(index < v->olen && index >= 0);
     return v->obj[index].klen;
 }
+
 json_value* json_get_object_value(const json_value* v, size_t index)
 {
     assert(v != NULL && v->type == F_OBJECT);
@@ -492,6 +498,104 @@ static int json_parse_value(json_context* c, json_value* v)
 	}
 }
 
+/* generate json string*/
+int json_stringify(const json_value* v, char** json, size_t* length)
+{
+    json_context c;
+    int ret;
+    assert(v != NULL);
+    assert(json != NULL);
+
+    c.stack = (char*)malloc(c.size = F_JSON_CONTEXT_STACK_SIZE);
+    c.top = 0;
+    if ((ret = json_stringify_value(&c, v)) != F_PARSE_OK)
+    {
+        free(c.stack);
+        *json = NULL;
+        return ret;
+    }
+    if (length) { *length = c.top; }
+    PUT_CHAR('\0', &c);
+    *json = c.stack;
+    return F_STRINGIFY_OK;
+}
+
+int json_stringify_value(json_context* c, const json_value* v)
+{
+    switch (v->type) {
+        case F_OBJECT:
+            {
+                PUT_CHAR('{', c);
+                for (size_t i = 0; i < v->olen; ++i) {
+                    /* key as a string , cant directly memcpy*/
+                    if (i > 0) { PUT_CHAR(',', c); }
+                    json_stringify_string(c, v->obj[i].k, v->obj[i].klen);
+                    PUT_CHAR(':', c);
+                    json_stringify_value(c, &v->obj[i].v);
+                }
+                PUT_CHAR('}', c);
+            }
+            break;
+        case F_STRING:
+            json_stringify_string(c, v->s, v->slen);
+            break;
+        case F_ARRAY:
+            //TODO
+            break;
+        case F_NUMBER:
+            {
+                char* buffer = context_push(c, 32);
+                int length = sprintf(buffer, "%.17g", v->num);
+                c->top -= 32 - length;
+            }
+            break;
+        case F_FALSE:
+        case F_TRUE:
+        case F_NULL:
+            {
+                //TODO:  可优化
+                const char* s = json_type_list[v->type];
+                memcpy(context_push(c, strlen(s)), s, strlen(s));
+            }
+            break;
+        default:
+            assert(0 && "Unknown ERROR");
+    }
+    return F_PARSE_OK;
+}
+
+/* 对string特殊处理 */
+int json_stringify_string(json_context* c, const char* str, size_t len)
+{
+    assert(str != NULL);
+    PUT_CHAR('"', c);
+    for (size_t i = 0; i < len; ++i) {
+        unsigned char ch = (unsigned char) str[i];
+        if (ch < 13 || ch == 34 || ch == 92)
+        {
+            char* p = (char*)context_push(c, 2);
+            /*convert escape char*/
+            switch (ch) {
+                case '\t': { *p++ = '\\'; *p++ = 't'; }
+                    break;
+                case '\"': { *p++ = '\\'; *p++ = '"'; }
+                    break;
+                case '\\': { *p++ = '\\'; *p++ = '\\'; }
+                    break;
+                case '\r': { *p++ = '\\'; *p++ = 'r'; }
+                    break;
+                case '\n': { *p++ = '\\'; *p++ = 'n'; }
+                    break;
+                default:
+                    return F_PARSE_ERROR_VALUE;
+            }
+        } else {
+            PUT_CHAR(ch, c);
+        }
+    }
+    PUT_CHAR('"', c);
+    return F_STRINGIFY_OK;
+}
 /* return top */
 static void* context_push(json_context* c, size_t size) {
     void* ret;
@@ -500,7 +604,7 @@ static void* context_push(json_context* c, size_t size) {
         if (c->size == 0) { c->size = F_JSON_CONTEXT_STACK_SIZE; }
         while (c->top + size >= c->size)
 		{
-            c->size += c->size;  /* c->size * 1.5 */
+            c->size += c->size;  /* c->size  DOUBLE EXPAND*/
 		}
         c->stack = (char*)realloc(c->stack, c->size);
     }

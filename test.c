@@ -85,6 +85,15 @@ static void test_error_case(parse_code expect, const char* test_case)
     free_json_value(&v);
 }
 
+static void test_round_trip(const char* test_case)
+{
+    json_value v;
+    v.type = F_NULL;
+    char* json;
+    size_t len;
+
+}
+
 /* ... */
 
 static void test_parse_cases()
@@ -172,25 +181,35 @@ static void test_parse_cases()
 
 }
 
-void show_car_json(json_value* v) {
-    if (strcmp(v->obj->k, "car") == 0)
-    {
-        printf("Car:  {\n");
-        v = &(v->obj->v);
-        for (int i = 0; i < v->olen; i++) {
-            switch (v->obj[i].v.type) {
-                case F_STRING:
-                    printf("%s : %s ,\n", v->obj[i].k, v->obj[i].v.s);
-                    break;
-                case F_NUMBER:
-                    printf("%s : %f ,\n", v->obj[i].k, v->obj[i].v.num);
-                    break;
-                case F_NULL:
-                default:
-                    printf("error\n");
+void print_json(json_value* v) {
+    switch (v->type) {
+        case F_OBJECT:
+            printf("{\n");
+            for (int i = 0; i < v->olen; i++) {
+                printf("%s : ", v->obj[i].k);
+                print_json(&v->obj[i].v);
             }
-        }
+            printf("}\n");
+            break;
+        case F_STRING:
+            printf("%s\n", v->s);
+            break;
+        case F_NUMBER:
+            printf("%f\n", v->num);
+            break;
+        case F_NULL:
+        case F_TRUE:
+        case F_FALSE:
+            printf("%s\n", json_type_list[v->type]);
+            break;
+        default:
+            printf("error\n");
     }
+}
+
+json_value generate_json()
+{
+
 }
 
 int main()
@@ -201,12 +220,33 @@ int main()
     test_error_case(F_PARSE_OK, "{\"AAAA\":{\"XXX\":889}}");
 #endif
 
-    char* json = "{\"car\" :    {\n  \"id\":\"2131234523523\", \"weight\": 289.89 , \"name\":\"fih\"  \n}\n}";
-    json_value v;
-    json_parse(&v, json);
-    printf("%d\n", strcmp(v.obj->k, "c22ar"));
+    //char* json = "{\"car\" :{\n  \"id\":\"213\", \"weight\": 289.89 , \"owner\":{\"ooo\":\"111\"}  \n}\n}";
+    FILE* fp = fopen("../json.txt", "r");
+    if(!fp) {
+        perror("File opening failed");
+        return EXIT_FAILURE;
+    }
 
-    show_car_json(&v);
+    int c; // note: int, not char, required to handle EOF
+    char s[256];
+    size_t i = 0;
+
+    while ((c = fgetc(fp)) != EOF) { // standard C I/O file reading loop
+        s[i] = (char)c;
+        i++;
+    }
+    s[i] = '\0';
+
+    if (ferror(fp))
+        puts("I/O error when reading");
+    fclose(fp);
+
+    printf("%s\n\n", s);
+
+    json_value v;
+    json_parse(&v, s);
+
+    print_json(&v);
 
     //printf("%d/%d (%3.2f%%) PASSED \n", test_pass, test_count, test_pass * 100.0 / test_count);
     return main_ret;

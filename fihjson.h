@@ -22,6 +22,7 @@ typedef enum
 typedef enum 
 {
 	F_PARSE_OK = 0,
+	F_STRINGIFY_OK = 1,
 	F_PARSE_ERROR_VALUE = 2,
 	F_PARSE_ERROR_MULTIPLE_ROOT = 4,
 	F_PARSE_ERROR_EMPTY = 6,
@@ -63,13 +64,13 @@ struct json_object
 	json_value v;
 };
 
-
 typedef struct 
 {
 	const char* json;
 	char* stack;
 	size_t size, top;	// dynamic stack
-}json_context;  
+}json_context;
+
 #ifndef F_JSON_CONTEXT_STACK_SIZE
 #define F_JSON_CONTEXT_STACK_SIZE 256
 #endif
@@ -95,6 +96,8 @@ json_value* json_get_object_value(const json_value* v, size_t index);
 
 
 int json_parse(json_value* value, const char* json);
+int json_stringify(const json_value* v, char** json, size_t* length);
+int json_stringify_string(json_context* c, const char* str, size_t len);
 //int json_parse_literal(json_context* c, json_value* v, char* expect);
 
 void free_json_value(json_value* v);

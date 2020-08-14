@@ -55,6 +55,8 @@ struct json_value
 	/* for object*/
 	json_object* obj; 
 	size_t olen;
+
+	json_value(*add)(json_value* root, json_type type, char* k, json_value v);
 };
 
 struct json_object 
@@ -77,8 +79,8 @@ typedef struct
 
 extern char* json_type_list[]; 
 
-void json_set_boolean(json_value* v, const int b);
-void json_set_number(json_value* v, const double num);
+void json_set_boolean(json_value* v, int b);
+void json_set_number(json_value* v, double num);
 void json_set_string(json_value* v, const char* str, size_t len);
 
 json_type json_get_type(const json_value* value);
@@ -100,6 +102,8 @@ int json_stringify(const json_value* v, char** json, size_t* length);
 int json_stringify_string(json_context* c, const char* str, size_t len);
 //int json_parse_literal(json_context* c, json_value* v, char* expect);
 
+void init_json_value(json_value* v);
 void free_json_value(json_value* v);
+void add_json(json_value* root, json_type type, char* k, json_value v);
 
 #endif //FIHJSON_H

@@ -1,11 +1,18 @@
 {
-    "name":"tesla",
-    "info":{
-        "weight":   2222,
-        "price":"12223.33",
-        "owner":{
-            "com":"foxconn",
-            "name":"wwowowo"
+    "command":"onlineRemoteControl",
+    "commandValues":{
+        "commandData": "RemoteCMD",
+        "carProfile":{
+            "carId":"456",
+            "carBrand":"BMW",
+            "carName":"123",
+            "createTimestamp":"20200202"
         }
+    },
+    "timestamp":"20200101",
+    "Script":{
+        "AutoOffTimeSet":"20",
+        "scriptPause":"2000",
+        "AcTemp":"25"
     }
 }

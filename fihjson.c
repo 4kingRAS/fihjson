@@ -30,36 +30,6 @@ int json_stringify_value(json_context* c, const json_value* v);
 /*__________________DECLARATION_AND_MACRO___________________*/
 
 
-/*
-	parameter:  value - json type, json - json string
-	return:     status enum
-*/
-int json_parse(json_value* value, const char* json) 
-{
-	json_context c; // For parse
-	int ret;
-	assert(value != NULL);
-
-	c.json = json;
-	c.stack = NULL;
-	c.size = c.top = 0;
-
-	JSON_INIT(value); //initialize, the parser will reassign
-	json_parse_whitespace(&c); // parse before context
-	ret = json_parse_value(&c, value);
-	if (ret == F_PARSE_OK)
-	{
-		json_parse_whitespace(&c); // parse after context
-		if (c.json[0] != '\0')
-		{
-			//multiple root exist
-			ret = F_PARSE_ERROR_MULTIPLE_ROOT;
-		}
-	}
-	assert(c.top == 0);
-	free(c.stack);			// free stack
-	return ret;
-}
 
 /*
 	skip whitespace
@@ -349,7 +319,7 @@ void json_set_boolean(json_value* v, int b)
 	v->type = b ? F_TRUE : F_FALSE;
 }
 
-void json_set_number(json_value* v, const double num)
+void json_set_number(json_value* v, double num)
 {
 	assert(v != NULL);
 	free_json_value(v);
@@ -471,12 +441,7 @@ void free_json_value(json_value* v)
 	v->type = F_NULL;
 }
 
-/*
- 	json parser main branch
-*/
-static int json_parse_value(json_context* c, json_value* v) 
-{
-    /**/
+void init_json_value(json_value* v) {
     v->obj = NULL;
     v->olen = 0;
     v->type = F_NULL;
@@ -485,6 +450,46 @@ static int json_parse_value(json_context* c, json_value* v)
     v->s = NULL;
     v->slen = 0;
     v->num = 0;
+}
+
+/*
+	parameter:  value - json type, json - json string
+	return:     status enum
+*/
+int json_parse(json_value* value, const char* json)
+{
+    json_context c; // For parse
+    int ret;
+    assert(value != NULL);
+
+    c.json = json;
+    c.stack = NULL;
+    c.size = c.top = 0;
+
+    JSON_INIT(value); //initialize, the parser will reassign
+    json_parse_whitespace(&c); // parse before context
+    ret = json_parse_value(&c, value);
+    if (ret == F_PARSE_OK)
+    {
+        json_parse_whitespace(&c); // parse after context
+        if (c.json[0] != '\0')
+        {
+            //multiple root exist
+            ret = F_PARSE_ERROR_MULTIPLE_ROOT;
+        }
+    }
+    assert(c.top == 0);
+    free(c.stack);			// free stack
+    return ret;
+}
+
+/*
+ 	json parser main branch
+*/
+static int json_parse_value(json_context* c, json_value* v) 
+{
+    /**/
+    init_json_value(v);
 	switch (c->json[0])
 	{
 	    case '{'    : return json_parse_object(c, v);
@@ -616,5 +621,43 @@ static void* context_push(json_context* c, size_t size) {
 static void* context_pop(json_context* c, size_t size) {
     assert(c->top >= size);
     return c->stack + (c->top -= size);
+}
+
+/* 生成 Json 树 */
+void add_json(json_value* root, json_type type, char* k, json_value v) {
+    json_value value;
+    switch (type) {
+        case F_OBJECT: {
+            value.type = F_OBJECT;
+            value.olen++;
+            value.obj = (json_object *) malloc(sizeof(json_object));
+            value.obj->k = k;
+            value.obj->v = v;
+        }
+            break;
+        case F_STRING: {
+            value.type = F_STRING;
+            value.slen = strlen(k);
+            value.s = k;
+        }
+            break;
+        case F_ARRAY:
+            //TODO
+            break;
+        case F_NUMBER: {
+            json_context c;
+            c.json = k;
+            value.type = F_NUMBER;
+            value.num = json_parse_number(&c, &v);
+        }
+        break;
+        case F_FALSE:
+        case F_TRUE:
+        case F_NULL:
+
+            break;
+        default:
+            assert(0 && "Unknown ERROR");
+    }
 }
 

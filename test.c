@@ -221,8 +221,8 @@ int main()
 #endif
 
     //char* json = "{\"car\" :{\n  \"id\":\"213\", \"weight\": 289.89 , \"owner\":{\"ooo\":\"111\"}  \n}\n}";
-    FILE* fp = fopen("../json.txt", "r");
-    if(!fp) {
+    FILE* fpr = fopen("../json.txt", "r");
+    if(!fpr) {
         perror("File opening failed");
         return EXIT_FAILURE;
     }
@@ -231,22 +231,32 @@ int main()
     char s[256];
     size_t i = 0;
 
-    while ((c = fgetc(fp)) != EOF) { // standard C I/O file reading loop
+    while ((c = fgetc(fpr)) != EOF) { // standard C I/O file reading loop
         s[i] = (char)c;
         i++;
     }
     s[i] = '\0';
 
-    if (ferror(fp))
+    if (ferror(fpr))
         puts("I/O error when reading");
-    fclose(fp);
+    fclose(fpr);
 
     printf("%s\n\n", s);
 
     json_value v;
     json_parse(&v, s);
-
     print_json(&v);
+
+    char* json;
+    size_t len;
+    json_stringify(&v, &json, &len);
+
+    FILE* fpw = fopen("../a.txt", "w");
+    if(!fpw) {
+        perror("File create failed");
+        return EXIT_FAILURE;
+    }
+    fprintf(fpw, json);
 
     //printf("%d/%d (%3.2f%%) PASSED \n", test_pass, test_count, test_pass * 100.0 / test_count);
     return main_ret;
